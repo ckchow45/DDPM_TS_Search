@@ -131,7 +131,7 @@ class GaussianDiffusion(nn.Module): # defining a GaussianDiffusion class from th
 
         return x
 
-    def forward(self, x, model, mask=None): # the training pass for the diffusion model.
+    def forward(self, x, model, mask=None, start=None, end=None): # the training pass for the diffusion model.
         """
         Training loss computation.
 
@@ -148,11 +148,17 @@ class GaussianDiffusion(nn.Module): # defining a GaussianDiffusion class from th
 
         x_t = self.q_sample(x, t, noise=noise) # Computes the noisy version of the data at timestep t using the q_sample function
 
-        # Pass t as a full batch-length vector (for positional encoding)
-        t_broadcast = t.view(B, 1).expand(B, T)  # Expands the timestep tensor t to shape (B, T) so that the model gets timestep info per time step (for positional encodings).
+        # reshapes t to (B, T) so that it matches the shape of the data it's associated with (B, T, F)
+        t_broadcast = t.view(B, 1).expand(B, T)  # Expands the timestep tensor t to shape (B, T) so that all frames in the batch have the same timestep (t)
+
+        # Use provided start/end, if not provided, then just extract from the path itself
+        if start is None:
+            start = x[:, 0]  # (B, F)
+        if end is None:
+            end = x[:, -1]  # (B, F)
 
         # Model prediction (typically noise)
-        pred_noise = model(x_t, t_broadcast, x[:, 0], x[:, -1])  # start = x[:, 0], end = x[:, -1]
+        pred_noise = model(x_t, t_broadcast, start = start, end = end)  # start = x[:, 0], end = x[:, -1]
         # feeds noisy data to the model
         # Also gives:
             #t_broadcast: timestep for conditioning,
@@ -330,7 +336,7 @@ class Trainer:
                 self.optimizer.zero_grad() # Clear previous gradients.
 
                 with torch.autocast(device_type= (self.device or 'cuda' if torch.cuda.is_available() else 'cpu'), enabled=self.use_amp): # If AMP is enabled, compute the loss in mixed precision.
-                    loss = self.diffusion(path, self.model, mask=mask) # call diffusion model forward function 
+                    loss = self.diffusion(path, self.model, mask=mask, start = start, end = end) # call diffusion model forward function 
 
                 self.scaler.scale(loss).backward() # Scale the loss to prevent underflow (AMP trick).
                 self.scaler.step(self.optimizer) # Perform backward pass and optimizer step.
@@ -369,12 +375,16 @@ class SinusoidalPosEmb(nn.Module): # define class/module
         return emb # results in a smooth, continuous embedding of the timestep that carries both high-frequency and low-frequency information — helping the model know “how far along” the diffusion process is.
 
 # Residual Block with time embedding
+# A ResNet (short for Residual Network) is a neural network architecture built out of many stacked residual blocks. 
+# this is a mini-residual block adapted for 1D convolutional architecture
 class ResnetBlock(nn.Module): # ResNet block for Unet made from pytorch class
     def __init__(self, dim_in, dim_out, time_emb_dim, groups=8): 
-        # dim_in = Number of input channels
-        # dim_out = Number of output channel
-        # time_emb_dim: Dimensionality of the time embedding vector.
-        # groups: Number of groups for GroupNorm (like batch norm, but splits into groups)
+        """"
+        dim_in = Number of input channels
+        dim_out = Number of output channels
+        time_emb_dim: Dimensionality/size of the time embedding vector.
+        groups: Number of groups for GroupNorm 
+        """"
         super().__init__()
 
         # multi layer perceptron
@@ -386,18 +396,19 @@ class ResnetBlock(nn.Module): # ResNet block for Unet made from pytorch class
             nn.Linear(time_emb_dim, dim_out)
         )
         # normalization layers
-        # GroupNorm normalizes across groups of channels instead of across the batch 
+        # GroupNorm normalizes across groups of channels instead of across the batch, helps stabilize training by normalizing features in channel groups 
             # splits channels into groups of 8 and normalizes within each group.
         self.norm1 = nn.GroupNorm(groups, dim_in) 
         self.norm2 = nn.GroupNorm(groups, dim_out)
-        self.act = Mish()
+        self.act = Mish() # apply activation function
 
-        # main feature extraction by 2 1D convolutional layers with kernel size 3 and padding 1 to preserve spatial size.
+        # main feature extraction by 2 1D convolutional layers with kernel size 3 and padding 1 so the output tensor after the convolution should still have the same length T in the time dimension.
         self.conv1 = nn.Conv1d(dim_in, dim_out, 3, padding=1)
         self.conv2 = nn.Conv1d(dim_out, dim_out, 3, padding=1)
 
-        # If input and output dims don’t match, apply a 1x1 conv to match them.
-        # Otherwise, pass input as-is (nn.Identity()).
+        # Residual connection setup
+        # If input and output dims don't match, apply a 1D conv to match them.
+        # Otherwise, pass input as an normal identity function (nn.Identity()) 
         self.residual = nn.Conv1d(dim_in, dim_out, 1) if dim_in != dim_out else nn.Identity()
 
     # forward pass
@@ -407,22 +418,22 @@ class ResnetBlock(nn.Module): # ResNet block for Unet made from pytorch class
     def forward(self, x, t_emb):
         h = self.norm1(x) # normalize input
         h = self.act(h) # apply activation function
-        h = self.conv1(h)# 1st convolution (projects input from dim_in to dim_out).
+        h = self.conv1(h)# 1st convolution (projects input from dim_in to dim_out), transforms x into a richer feature representation.
 
         t_out = self.mlp(t_emb).unsqueeze(-1) # Apply the multi layer preceptron to the time embedding. unsqueeze(-1) reshapes it to match shape (B, C, 1) for broadcasting.
-        h = h + t_out # Add it to the hidden feature map — this injects timestep information into the block.
+        h = h + t_out # Add it to the hidden feature map, this injects timestep information into the block and adds temporal context into each time slice of the sequence.
 
         h = self.norm2(h) # Normalize
         h = self.act(h) # Activation function 
         h = self.conv2(h) # 2nd convolution
 
-        return h + self.residual(x) # Add the residual connection (skip connection).
+        return h + self.residual(x) # Final output is the refined path (h) plus a shortcut version of the original input (x), the residual connection
 
 # Downsample and Upsample layers
 class Downsample(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        self.conv = nn.Conv1d(dim, dim, 4, 2, 1)
+        self.conv = nn.Conv1d(dim, dim, 3, 2, 1)
 
     def forward(self, x):
         return self.conv(x)
@@ -430,10 +441,9 @@ class Downsample(nn.Module):
 class Upsample(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        self.conv = nn.Conv1d(dim, dim, 3, padding=1)
+        self.conv = nn.ConvTranspose1d(dim, dim, 4, 2, 1)
 
     def forward(self, x):
-        x = F.interpolate(x, scale_factor=2, mode='linear', align_corners=False)
         return self.conv(x)
 
 # Mish activation function 
@@ -442,41 +452,57 @@ class Mish(nn.Module):
         return x * torch.tanh(F.softplus(x))
     
 # Residual with Zero Initialization
-# In a standard residual block, you have: Output=Input+f(Input), where f() is a non-linear transformation 
-# ReZero changes this to Output=Input+ α * f(Input), where alpha is a learnable scalar parameter, initialized at 0
+# A residual connection is a shortcut path in a neural network that bypasses one or more layers and adds the input directly to the output of those layers. In its simplest form: output=x+f(x)
+# x is the input to a block of layers, f(x) is the output of the block usually some form on non-linear transformation (convolution layers, etc.), x+f(x) is the final output: the residual connection.
+# ReZero changes this to output = x + g * f(x), where g is a learnable scalar parameter, initialized at 0
 # As training progresses, alpha learns how much of f() should be added.
 class Rezero(nn.Module):
-    def __init__(self, fn):
+    def __init__(self, fn): # single argument fn, which is the function (usually another module like an attention block) that will be wrapped.
         super().__init__()
-        self.fn = fn
+        self.fn = fn # stores the function internally
         self.g = nn.Parameter(torch.zeros(1))  # learnable scale initialized at 0
+        # self.g is a learnable scalar parameter starting at 0, equation wise it looks like: output = x + 0 * fn(x)
+        # During training, it will gradually grow, allowing the function fn(x) to contribute more over time, essentially g learns how much of attn(x) to inject into the output.
 
     def forward(self, x):
-        return x + self.g * self.fn(x)
+        return x + self.g * self.fn(x) # Computes the output of the wrapped function: fn(x), scales it by g, adds it to the input x, creating a residual connection like in ResNets.
     
-# Attention class
+# Linear Attention class
 class LinearAttention1d(nn.Module):
     def __init__(self, dim, heads=4, dim_head=32):
-        super().__init__()
+        """"
+        dim: input channel dimension (number of features)
+        heads: number of attention heads (default 4)
+        dim_head: size of each head’s projection (default 32)
+        """"
+        super().__init__() # initializes nn.Module base class
         self.heads = heads
-        inner_dim = dim_head * heads
-        self.to_qkv = nn.Conv1d(dim, inner_dim * 3, 1, bias=False)
-        self.to_out = nn.Conv1d(inner_dim, dim, 1)
+        inner_dim = dim_head * heads # Total inner dimension for query/key/value is dim_head × heads
+        self.to_qkv = nn.Conv1d(dim, inner_dim * 3, 1, bias=False) # Applies a 1D convolution to project input x into Q, K, and V, each of shape (inner_dim, t)
+                                                                   # Since we need 3 sets (Q, K, V), the output has size 3 × inner_dim.
+        self.to_out = nn.Conv1d(inner_dim, dim, 1) # Projects the attention result back to the original input dimension with another 1D conv.
 
     def forward(self, x):
-        b, c, t = x.shape
-        qkv = self.to_qkv(x).chunk(3, dim=1)
-        q, k, v = map(lambda x: x.reshape(b, self.heads, -1, t), qkv)
+        """"
+        x: input tensor of shape (batch, channels, time)
+        """"
+        b, c, t = x.shape # B = batch size, F = number of channels/features, T = sequence length
+        qkv = self.to_qkv(x).chunk(3, dim=1) # Applies the convolution to compute Q, K, and V in one go
+        q, k, v = map(lambda x: x.reshape(b, self.heads, -1, t), qkv) # splits the tensor into 3: q, k, v, each shape (b, inner_dim, t) and reshape each tensor to: (batch, heads, dim_head, time)
+        # this makes each head independent for multi-head attention
 
         # softmax over sequence length
         q = q.softmax(dim=-1)
         k = k.softmax(dim=-2)
 
-        context = torch.einsum('bhdt,bhds->bhds', k, v)
-        out = torch.einsum('bhdt,bhds->bhdt', q, context)
+        # context computation
+        context = torch.einsum('bhdt,bhds->bhds', k, v) # Sums the product of the elements of the input operands along dimensions specified using a notation based on the Einstein summation convention
+        # For each time point, aggregates the value vectors, weighted by keys
 
-        out = out.reshape(b, -1, t)
-        return self.to_out(out)
+        out = torch.einsum('bhdt,bhds->bhdt', q, context) # Applies attention: multiply softmaxed queries q by the precomputed context
+
+        out = out.reshape(b, -1, t) # Reshape from (batch, heads, dim_head, time) → (batch, inner_dim, time)
+        return self.to_out(out) # Final convolution maps back to original input channel size
 
 # UNet1D with down/up path and ResNet blocks
 class UNet(nn.Module):
@@ -515,27 +541,29 @@ class UNet(nn.Module):
 
         # Downsampling path
         for i in range(len(dims) - 1): # iterate for every dim, allowing modular number of layers in the Unet
+            in_dim = dims[i + 1]
             self.downs.append(nn.ModuleList([ # add to list of layers
-                ResnetBlock(dims[i], dims[i + 1], time_emb_dim), # ResnetBlock increases feature richness.
-                ResnetBlock(dims[i + 1], dims[i + 1], time_emb_dim),
-                Rezero(LinearAttention1d(dims[i + 1], heads=4, dim_head=32)),
-                Downsample(dims[i + 1]) # A Downsample layer halves the temporal resolution.
+                ResnetBlock(dims[i], in_dim, time_emb_dim), # ResnetBlock increases feature richness.
+                ResnetBlock(in_dim, in_dim, time_emb_dim),
+                Rezero(LinearAttention1d(in_dim, heads=4, dim_head=in_dim // 4)), # use ReZero and attention, also set dim_head such that the total inner dimension of the attention equals the input channels.
+                Downsample(in_dim) # A Downsample layer halves the temporal resolution.
             ]))
-
+        
         # Middle block
         # Two ResNet blocks at the deepest level of the UNet
         # Fully retains time conditioning.
         self.mid_block1 = ResnetBlock(dims[-1], dims[-1], time_emb_dim)
-        self.mid_attn = Rezero(LinearAttention1d(dims[-1], heads=4, dim_head=32))
+        self.mid_attn = Rezero(LinearAttention1d(dims[-1], heads=4, dim_head=dims[-1] // 4))
         self.mid_block2 = ResnetBlock(dims[-1], dims[-1], time_emb_dim)
 
         # Upsampling path
         for i in reversed(range(len(dims) - 1)): # iterate for every dim, allowing modular number of layers in the Unet
+            in_dim = dims[i]
             self.ups.append(nn.ModuleList([ # add to list of layers
-                ResnetBlock(dims[i + 1] * 2, dims[i], time_emb_dim), # Apply ResNet block
-                ResnetBlock(dims[i], dims[i], time_emb_dim),
-                Rezero(LinearAttention1d(dims[i], heads=4, dim_head=32)),
-                Upsample(dims[i]) # Upsample
+                ResnetBlock(dims[i + 1] * 2, in_dim, time_emb_dim),
+                ResnetBlock(in_dim, in_dim, time_emb_dim),
+                Rezero(LinearAttention1d(in_dim, heads=4, dim_head=in_dim // 4)), 
+                Upsample(in_dim)
             ]))
 
         self.output_block = ResnetBlock(dims[0], dims[0], time_emb_dim) # final ResNet block
@@ -549,7 +577,9 @@ class UNet(nn.Module):
         """
         # expand the start and end frames so that they match the shape of the path data, this is for concatenation later 
         start = start.unsqueeze(1).expand(-1, x.shape[1], -1)
+        print(start.shape)
         end = end.unsqueeze(1).expand(-1, x.shape[1], -1)
+        print(end.shape)
 
         # concat start and end along feature dimension (F) of the frame data
         # The current noised frame (x)
@@ -564,7 +594,9 @@ class UNet(nn.Module):
 
         # embed start and end using a small MLP
         start_global = start[:, 0, :] # split out the expanded start/end frames as no need to include time dimension (B,T,F) -> (B,F)
-        end_global = end[:, 0, :]      
+        end_global = end[:, 0, :]
+        print(start_global.shape)
+        print(end_global.shape)      
         se_emb = torch.cat([start_global, end_global], dim=-1)  # concatenate the start and end frames together into shape (B, 2F)
         se_emb = self.se_mlp(se_emb)             # apply the earlier multi layer perceptron outputs: (B, time_emb_dim)
         t_emb = t_emb + se_emb                   # put start/end into timestep embedding so model understands what the start and end point in time looks like, as meaning of time depends on what the start and end points are.
