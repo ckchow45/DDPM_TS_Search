@@ -9,7 +9,118 @@ from torch.cuda.amp import GradScaler, autocast
 from copy import deepcopy
 from torch.utils.data import Dataset
 from torch.nn.utils.rnn import pad_sequence
-import numpy
+import numpy as np
+import mdtraj as md
+
+def periodic_mse_loss(pred, target):
+    """
+    Periodic-aware MSE loss for dihedrals.
+    Args:
+        pred: Model predictions in [-1, 1] (normalized)
+        target: Ground truth in [-1, 1] (normalized)
+    Returns:
+        MSE loss accounting for periodicity.
+    """
+    # Convert to radians temporarily
+    pred_rad = pred * torch.pi
+    target_rad = target * torch.pi
+    
+    # Smallest angular difference
+    diff = torch.atan2(torch.sin(pred_rad - target_rad), 
+                      torch.cos(pred_rad - target_rad))  # [-π, π]
+    
+    # Convert back to [-1, 1] range for stable training
+    diff_normalized = diff / torch.pi
+    return (diff_normalized ** 2)
+
+# function for saving the inference output into a XYZ file
+def save_xyz(generated_path, filename, n_atoms, atom_names=None):
+    """
+    Save a trajectory as an XYZ file.
+    
+    Parameters:
+    - coordinates: multi-dimensional (frames, atoms, 3 coordinates) array of frames
+    - filename: output filename
+    - atom_names: list of atom names (optional, defaults to 'C')
+    """
+    path = generated_path.squeeze(0)  # Shape: (50, F), remove the batch number
+    xyz = path.reshape(-1, n_atoms, 3) # turn into format (number of frames, number of atoms, XYZ coordinates for each atom)
+    coordinates = xyz.cpu().numpy() # convert to numpy array
+
+    frames, atoms, _ = coordinates.shape
+    if atom_names is None: # if no atom symbols are given
+        atom_names = ['C'] * atoms  # default to carbon for all atoms
+
+    with open(filename, 'w') as file:
+        for f in range(frames): # loop over every frame
+            file.write(str(atoms) + "\n") # number of atoms
+            file.write(f"Frame {f+1}\n") # comment line just saying which frame the following information is, +1 to avoid 0 indexing
+            for i in range(atoms): # loop over every atom
+                x, y, z = coordinates[f, i] # extract coordinates from each frame and atom
+                file.write(f"{atom_names[i]} {x:.5f} {y:.5f} {z:.5f}\n") # write each atom XYZ coordinate, the .5f is python string formatting to only show 5 decimal places
+
+# helper function to identify purines.
+def is_purine(nt): 
+    return nt in ['A', 'G']
+
+def cg_save_xyz(generated_path, filename, topology_file=None):
+    """
+    Save coarse-grained trajectory as an XYZ file.
+
+    Parameters:
+    - generated_path: Tensor of shape (1, T, F)
+    - filename: output XYZ filename
+    - topology_file: Path to a topology file (.prmtop, .pdb) used to generate bead names
+    """
+    # Remove batch dimension: (1, T, F) = (T, F)
+    path = generated_path.squeeze(0)
+
+    # Extract information and calculate number of beads 
+    T, F = path.shape # extract T (frames) and F (flattened coordinate length).
+    assert F % 3 == 0, "Each bead must have 3 coordinates (x, y, z)" # check that F is divisible by 3 (x, y, z for each bead).
+    n_beads = F // 3 # calculate number of beads by dividing the number of coordiantes (features) by 3 as each bead should have 3 coordinates
+
+    xyz = path.reshape(T, n_beads, 3) # Reshape into 3D tensor: (T, n_beads, 3) for XYZ writing.
+    coordinates = xyz.cpu().numpy() # move to cpu and convert to a numpy array for easier manipulation
+
+    # Generate bead names from topology 
+    if topology_file is None: # check that topology file has been given
+        raise ValueError("Either bead_names or topology_file must be provided.")
+
+    top = md.load_prmtop(topology_file) # load topology file
+    base_seq = [res.name.strip()[0].upper() for res in top.residues] # extract first character of each residue name, e.g., "G" from "GUA", "A" from "ADE"
+
+    # define the expected CG bead layout for each nucleotide:
+    base_labels_per_residue = {
+        'purine': ['P', "O5'", "C5'", "C4'", "C1'", 'B1', 'B2'],
+        'pyrimidine': ['P', "O5'", "C5'", "C4'", "C1'", 'B1']
+    }
+
+    bead_names = [] # list setup to store bead names
+    for nt in base_seq: # loop over each base in nucleotide sequence extracted from topology file
+        bead_names.extend(base_labels_per_residue['purine' if is_purine(nt) else 'pyrimidine']) # append list of bead labels to bead_names, depending on whether it's a purine or pyrimidine
+
+    # check that the generated bead label list matches the number of CG beads
+    assert len(bead_names) == n_beads, f"Expected {n_beads} bead names, got {len(bead_names)}." 
+
+    # write to XYZ file
+    with open(filename, 'w') as f:
+        for frame_idx in range(T): # for each frame in the path
+            f.write(f"{n_beads}\n") # write number of beads
+            f.write(f"Frame {frame_idx+1}\n") # write the frame number
+            for bead_idx in range(n_beads): # for each bead in the frame 
+                x, y, z = coordinates[frame_idx, bead_idx] # extract coordinates from a frame and bead using the frame and bead index
+                f.write(f"{bead_names[bead_idx]} {x:.5f} {y:.5f} {z:.5f}\n") # write bead label and xyz coordinates on a new line, the .5f is python string formatting to only show 5 decimal places
+
+# function for calculating centre of mass
+def compute_com(coords, elements):
+    """
+    Compute center of mass from coordinates and atom types.
+        - coords = A NumPy array of shape (n_atoms, 3 coordinates), each row is the 3D coordinate [x, y, z] of one atom
+        - elements = A list of N atomic element symbols in the same order as the coordinates
+    """
+    weights = np.array([atomic_weights[e] for e in elements]) # For each atom element, look up its atomic weights from the predefined dictionary, outputs a vector of atomic masses
+    return np.average(coords, axis=0, weights=weights) # calculate masses using a weighted average (xyz coords are averaged using the atomic weights as weights)
 
 class GaussianDiffusion(nn.Module): # defining a GaussianDiffusion class from the pytorch module, contains the forward diffusion process, noise sampling and loss prediction
     def __init__( # initialises the class, defining arguments
@@ -129,7 +240,7 @@ class GaussianDiffusion(nn.Module): # defining a GaussianDiffusion class from th
                 sigma_t = torch.sqrt((1 - alpha_bar_prev) / (1 - alpha_bar_t) * beta_t)
                 x += sigma_t * noise
 
-        return x
+        return x * torch.pi
 
     def forward(self, x, model, mask=None, start=None, end=None): # the training pass for the diffusion model.
         """
@@ -164,27 +275,29 @@ class GaussianDiffusion(nn.Module): # defining a GaussianDiffusion class from th
             #t_broadcast: timestep for conditioning,
             #x[:, 0]: start frame (shape (B, F)),
             #x[:, -1]: end frame (shape (B, F)).
-            
+
+        # shape mismatches can occur in Unet architectures due to upsampling and downsampling as they scale by 2, so if inputs/outputs are not powers of 2 rounding can give mismatched values
+        if pred_noise.shape != noise.shape: # check if data shapes match as it can error out otherwise
+            min_T = min(pred_noise.shape[1], noise.shape[1]) # Computes the minimum valid size along the time dimension T and feature dimension F.
+            min_F = min(pred_noise.shape[2], noise.shape[2])
+            pred_noise = pred_noise[:, :min_T, :min_F] # Trims both pred_noise and noise tensors so they match exactly in shape.
+            noise = noise[:, :min_T, :min_F]
+            if mask is not None: # adjusts the mask to match.
+                mask = mask[:, :min_T]
+
         if self.loss_type == 'l2': # only one type of loss is currently supported
-            # shape mismatches can occur in Unet architectures due to upsampling and downsampling as they scale by 2, so if inputs/outputs are not powers of 2 rounding can give mismatches values
-            if pred_noise.shape != noise.shape: # check if data shapes match as it can error out otherwise
-                min_T = min(pred_noise.shape[1], noise.shape[1]) # Computes the minimum valid size along the time dimension T and feature dimension F.
-                min_F = min(pred_noise.shape[2], noise.shape[2])
-                pred_noise = pred_noise[:, :min_T, :min_F] # Trims both pred_noise and noise tensors so they match exactly in shape.
-                noise = noise[:, :min_T, :min_F]
-                if mask is not None: # adjusts the mask to match.
-                    mask = mask[:, :min_T]
-
             loss = (pred_noise - noise) ** 2 # Computes element-wise squared error between predicted noise and the ground-truth noise.
-
-            if mask is not None: # if mask is given
+        elif self.loss_type == 'periodic':
+            loss = periodic_mse_loss(pred_noise, noise)
+        else:
+            raise NotImplementedError(f"Loss type '{self.loss_type}' not supported.")
+        
+        if mask is not None: # if mask is given
                 mask = mask.unsqueeze(-1)  # expands mask to match last dimension
                 loss = loss * mask # Applies it to the loss to ignore padded frames.
                 loss = loss.sum() / mask.sum().clamp(min=1.0) # Computes the masked mean loss.
-            else:
-                loss = loss.mean() # If no mask is given, just take the average loss over all elements.
         else:
-            raise NotImplementedError(f"Loss type '{self.loss_type}' not supported.")
+            loss = loss.mean() # If no mask is given, just take the average loss over all elements.
 
         return loss # Returns the final computed loss to be used for backpropagation during training.
     
@@ -379,12 +492,12 @@ class SinusoidalPosEmb(nn.Module): # define class/module
 # this is a mini-residual block adapted for 1D convolutional architecture
 class ResnetBlock(nn.Module): # ResNet block for Unet made from pytorch class
     def __init__(self, dim_in, dim_out, time_emb_dim, groups=8): 
-        """"
+        """
         dim_in = Number of input channels
         dim_out = Number of output channels
         time_emb_dim: Dimensionality/size of the time embedding vector.
         groups: Number of groups for GroupNorm 
-        """"
+        """
         super().__init__()
 
         # multi layer perceptron
@@ -470,11 +583,11 @@ class Rezero(nn.Module):
 # Linear Attention class
 class LinearAttention1d(nn.Module):
     def __init__(self, dim, heads=4, dim_head=32):
-        """"
+        """
         dim: input channel dimension (number of features)
         heads: number of attention heads (default 4)
         dim_head: size of each head’s projection (default 32)
-        """"
+        """
         super().__init__() # initializes nn.Module base class
         self.heads = heads
         inner_dim = dim_head * heads # Total inner dimension for query/key/value is dim_head × heads
@@ -483,9 +596,9 @@ class LinearAttention1d(nn.Module):
         self.to_out = nn.Conv1d(inner_dim, dim, 1) # Projects the attention result back to the original input dimension with another 1D conv.
 
     def forward(self, x):
-        """"
+        """
         x: input tensor of shape (batch, channels, time)
-        """"
+        """
         b, c, t = x.shape # B = batch size, F = number of channels/features, T = sequence length
         qkv = self.to_qkv(x).chunk(3, dim=1) # Applies the convolution to compute Q, K, and V in one go
         q, k, v = map(lambda x: x.reshape(b, self.heads, -1, t), qkv) # splits the tensor into 3: q, k, v, each shape (b, inner_dim, t) and reshape each tensor to: (batch, heads, dim_head, time)
@@ -575,11 +688,11 @@ class UNet(nn.Module):
             x: input trajectory — shape (B, T, F)
             t: timestep tensor — shape (B, T)
         """
+        start = start.to(x.device)
+        end = end.to(x.device)
         # expand the start and end frames so that they match the shape of the path data, this is for concatenation later 
         start = start.unsqueeze(1).expand(-1, x.shape[1], -1)
-        print(start.shape)
         end = end.unsqueeze(1).expand(-1, x.shape[1], -1)
-        print(end.shape)
 
         # concat start and end along feature dimension (F) of the frame data
         # The current noised frame (x)
@@ -594,9 +707,7 @@ class UNet(nn.Module):
 
         # embed start and end using a small MLP
         start_global = start[:, 0, :] # split out the expanded start/end frames as no need to include time dimension (B,T,F) -> (B,F)
-        end_global = end[:, 0, :]
-        print(start_global.shape)
-        print(end_global.shape)      
+        end_global = end[:, 0, :]    
         se_emb = torch.cat([start_global, end_global], dim=-1)  # concatenate the start and end frames together into shape (B, 2F)
         se_emb = self.se_mlp(se_emb)             # apply the earlier multi layer perceptron outputs: (B, time_emb_dim)
         t_emb = t_emb + se_emb                   # put start/end into timestep embedding so model understands what the start and end point in time looks like, as meaning of time depends on what the start and end points are.
@@ -606,7 +717,6 @@ class UNet(nn.Module):
         h = [x]
 
         # Down path
-        # Apply a ResnetBlock, save intermediate output, and downsample.
         for resnet, resnet2, attn, down in self.downs:
             x = resnet(x, t_emb)
             x = resnet2(x, t_emb)
@@ -641,29 +751,3 @@ class UNet(nn.Module):
 
         # Convert back to shape (B, T, F) for compatibility with rest of the diffusion model.
         return x.permute(0, 2, 1)  # (B, F, T) → (B, T, F)
-
-# function for saving the inference output into a XYZ file
-def save_xyz(generated_path, filename, n_atoms, atom_names=None):
-    """
-    Save a trajectory as an XYZ file.
-    
-    Parameters:
-    - coordinates: multi-dimensional (frames, atoms, 3 coordinates) array of frames
-    - filename: output filename
-    - atom_names: list of atom names (optional, defaults to 'C')
-    """
-    path = generated_path.squeeze(0)  # Shape: (50, F), remove the batch number
-    xyz = path.reshape(-1, n_atoms, 3) # turn into format (number of frames, number of atoms, XYZ coordinates for each atom)
-    coordinates = xyz.numpy() # convert to numpy array
-
-    frames, atoms, _ = coordinates.shape
-    if atom_names is None: # if no atom symbols are given
-        atom_names = ['C'] * atoms  # default to carbon for all atoms
-
-    with open(filename, 'w') as file:
-        for f in range(frames): # loop over every frame
-            file.write(str(atoms) + "\n") # number of atoms
-            file.write(f"Frame {f+1}\n") # comment line just saying which frame the following information is, +1 to avoid 0 indexing
-            for i in range(atoms): # loop over every atom
-                x, y, z = coordinates[f, i] # extract coordinates from each frame and atom
-                file.write(f"{atom_names[i]} {x:.5f} {y:.5f} {z:.5f}\n") # write each atom XYZ coordinate, the .5f is python string formatting to only show 5 decimal places
