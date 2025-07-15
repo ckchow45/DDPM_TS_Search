@@ -1,5 +1,5 @@
 # GenAI_TS_Search
-This branch contains the codebase for training and running the dihedral angle–based DDPM model, which generates coarse-grained RNA backbone structures using predicted dihedrals and fixed internal bond information. These predicted dihedrals are converted into full 3D coordinates through reconstruction with the aforementiond internal coordinate information
+This branch contains the codebase for training and running the all-atom coordinate DDPM model, which generates full discrete paths of full atom structures.
 
 ## Dependencies
 Ensure that you have the following:
