@@ -1,9 +1,15 @@
 # GenAI_TS_Search
 This repository contains the codebase for my MSc Applied Bioinformatics research project focused on applying generative machine learning models—specifically a **Denoising Diffusion Probabilistic Model (DDPM)**—to aid **transition state (TS) searches** in **discrete path sampling (DPS)** workflows.
 
+## Package Requirements
+Please make sure to install the following dependencies for the code to function:
+- numpy
+- torch
+- MDTraj
+
 ## Data Processing
 
-Data was initially processed by converting the databases of minima and transition states into a graph before using Djikstra's path finding algorithm to construct discrete paths. Code for this can be found on the main branch as "path_generation.py"
+Data was initially processed by converting the databases of minima and transition states into a graph before using Djikstra's path finding algorithm to construct discrete paths. Please see `path_generation.py` on the main branch for implementation.
 
 ## The 3 models
 3 different models were made, with each kept on separate branches
@@ -14,20 +20,13 @@ Data was initially processed by converting the databases of minima and transitio
 | `CG_model`        | Coarse-Grained (CG)    | Uses CG bead representation                |
 | `Dihedral_model`  | Dihedral Angle         | Uses internal coordinates (angles only)    |
 
-
-  -The All-atom coordinate model is on the All_atom_model branch
-
-  -The CG model is on the CG_model branch
-
-  -The dihedral model is on the Dihedral_model branch
-
-Each model will have a script containing all the functions and classes that are called (Landscape_DDPM/py), and a separate training script that prepares the data for model training before calling the model to train and generate paths
-
-Please note that all the file paths will need to be updated if you wish to run these as they have been replaced with generic names
+Each model contains:
+- A script (e.g., `Landscape_DDPM.py`) defining model architecture and various helper functions.
+- A training script to load data, train the model, and generate paths.
 
 ## Model Evaluation
 
-RMSD to start and end are both calculated to evaluate the generated paths. Code for this can be found on the main branch as a notebook titled "RMSD_graph.ipynb"
+Root Mean Square Deviaion (RMSD) to start and end are both calculated to evaluate the generated paths. Code for this can be found on the main branch as a notebook titled "RMSD_graph.ipynb"
 
 ## References
 The DDPM model is largely based on the model made by Wang, Heron and Tiwary, with some modifications to allow for conditioning. Their paper can be found here:
