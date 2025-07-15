@@ -22,7 +22,7 @@ Data was initially processed by converting the databases of minima and transitio
 
 Each model contains:
 - A script (e.g., `Landscape_DDPM.py`) defining model architecture and various helper functions.
-- A training script to load data, train the model, and generate paths.
+- A training script to load data, process it, train the model, and generate paths.
 
 ## Model Evaluation
 
