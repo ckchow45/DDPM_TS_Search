@@ -12,7 +12,7 @@ This branch contains the code and training scripts required to train the dihedra
 
 The model operates on dihedral angles rather than Cartesian or coarse-grained bead coordinates. It is the most successful model among the three in generating valid RNA-like structures, although intermediate frame quality still varies
 
-The training code and the inference code are kept on the same script so you can just run dihedral_training.py once
+The training code and the inference code are kept on the same script so you can just run `dihedral_training.py` once
 
 All the background code on the actual UNet, beta schedule and general model architecture as well as the reconstruction code that is imported into the script can be found in Landscape_DDPM_v2.py
 
