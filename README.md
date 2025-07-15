@@ -8,6 +8,8 @@ Assuming you have data generated from the path_generation.py file and converted 
 
 The training script has been separated from the inference script. Make sure to run training_script.py before running inference_script.py
 
+All the background code on the actual UNet, beta schedule and general model architecture that is imported into the scripts can be found in Landscape_DDPM.py
+
 ## References
 The DDPM model is largely based on the model made by Wang, Heron and Tiwary, with some modifications to allow for conditioning. Their paper can be found here:
 
