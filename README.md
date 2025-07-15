@@ -1,14 +1,27 @@
 # GenAI_TS_Search
-Repository of code for my MSC Applied Bioinformatics research project on developing a generative Denoising Diffusion Probabilistic Model (DDPM) to help transition state searches in discrete path sampling
+This branch contains the codebase for training and running the dihedral angle–based DDPM model, which generates coarse-grained RNA backbone structures using predicted dihedrals and fixed internal bond information. These predicted dihedrals are converted into full 3D coordinates through reconstruction with the aforementiond internal coordinate information
+
+## Dependencies
+Ensure that you have the following installed:
+- `numpy`, `torch`, `tqdm`, `mdtraj`, `matplotlib` (for RMSD/trajectory evaluation)
+- The dataset in `.mdcrd` format
+- A valid `prmtop` file for topology
 
 ## Dihedral Model
 This branch contains the code and training scripts required to train the dihedral DDPM and generate dihedrals which can processed into a CG coordinate path.
 
-Assuming you have data generated from the path_generation.py file and converted them into .mdcrd format you can run the scripts to train your own model.
+The model operates on dihedral angles rather than Cartesian or coarse-grained bead coordinates. It is the most successful model among the three in generating valid RNA-like structures, although intermediate frame quality still varies
 
 The training code and the inference code are kept on the same script so you can just run dihedral_training.py once
 
 All the background code on the actual UNet, beta schedule and general model architecture as well as the reconstruction code that is imported into the script can be found in Landscape_DDPM_v2.py
+
+## Usage
+Assuming you have data generated from the path_generation.py file and converted them into .mdcrd format you can run the `dihedral_training.py` script to train your own model and generate a path
+
+Make sure to update the file paths in the script to match your local directory structure
+
+Optionally, you can use the `RMSD_graph.ipynb` notebook on the main branch to evaluate the generated path with RMSD to start and end
 
 ## References
 The DDPM model is largely based on the model made by Wang, Heron and Tiwary, with some modifications to allow for conditioning. Their paper can be found here:
