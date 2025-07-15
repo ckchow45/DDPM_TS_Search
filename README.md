@@ -14,7 +14,7 @@ The model operates on Cartesian coordinates. The structures it generates are gen
 
 The training code and the inference code are kept on the separate scripts `training_script.py` and `inference_script.py`
 
-All the background code on the actual UNet, beta schedule and general model architecture that is imported into the script can be found in `Landscape_DDPM_v2.py`
+All the background code on the actual UNet, beta schedule and general model architecture that is imported into the script can be found in `Landscape_DDPM.py`
 
 ## Usage
 Assuming you have data generated from the `path_generation.py` file and converted them into `.mdcrd` format you can run the `training_script.py` script to train your own model. Then run `inference_script.py` to generate a path
