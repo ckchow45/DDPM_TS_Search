@@ -15,6 +15,7 @@ Data was initially processed by converting the databases of minima and transitio
   -The dihedral model is on the Dihedral_model branch
 
 Each model will have a script containing all the functions and classes that are called, and a separate training script that handles the data processing pipeline and model training
+
 Please note that all the file paths will need to be updated if you wish to run these as they have been replaced with generic names
 
 ## Model Evaluation
