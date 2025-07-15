@@ -2,8 +2,8 @@
 This branch contains the codebase for training and running the dihedral angle–based DDPM model, which generates coarse-grained RNA backbone structures using predicted dihedrals and fixed internal bond information. These predicted dihedrals are converted into full 3D coordinates through reconstruction with the aforementiond internal coordinate information
 
 ## Dependencies
-Ensure that you have the following installed:
-- `numpy`, `torch`, `tqdm`, `mdtraj`, `matplotlib` (for RMSD/trajectory evaluation)
+Ensure that you have the following:
+- numpy, torch, tqdm, mdtraj, matplotlib (for RMSD/trajectory evaluation)
 - The dataset in `.mdcrd` format
 - A valid `prmtop` file for topology
 
@@ -17,7 +17,7 @@ The training code and the inference code are kept on the same script so you can 
 All the background code on the actual UNet, beta schedule and general model architecture as well as the reconstruction code that is imported into the script can be found in Landscape_DDPM_v2.py
 
 ## Usage
-Assuming you have data generated from the path_generation.py file and converted them into .mdcrd format you can run the `dihedral_training.py` script to train your own model and generate a path
+Assuming you have data generated from the `path_generation.py` file and converted them into `.mdcrd` format you can run the `dihedral_training.py` script to train your own model and generate a path
 
 Make sure to update the file paths in the script to match your local directory structure
 
