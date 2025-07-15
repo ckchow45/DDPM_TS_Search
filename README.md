@@ -16,9 +16,9 @@ Data was initially processed by converting the databases of minima and transitio
 
 | Branch            | Model Type            | Description                                 |
 |-------------------|------------------------|--------------------------------------------|
-| `All_atom_model`  | All-Atom Coordinate    | Uses full Cartesian coordinates            |
-| `CG_model`        | Coarse-Grained (CG)    | Uses CG bead representation                |
-| `Dihedral_model`  | Dihedral Angle         | Uses internal coordinates (angles only)    |
+| `All_atom_model`  | All-Atom Coordinate    | Trained off full Cartesian coordinates and generates full atomic structures            |
+| `CG_model`        | Coarse-Grained (CG)    | Trained off CG bead representation and generates coarse-grained structures                |
+| `Dihedral_model`  | Dihedral Angle         | Trained off dihedral angles and generates dihedral angles which are used to reconstruct structures    |
 
 Each model contains:
 - A script (e.g., `Landscape_DDPM.py`) defining model architecture and various helper functions.
