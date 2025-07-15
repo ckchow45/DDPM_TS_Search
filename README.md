@@ -26,7 +26,7 @@ Each model contains:
 
 ## Model Evaluation
 
-Root Mean Square Deviaion (RMSD) to start and end are both calculated to evaluate the generated paths. Code for this can be found on the main branch as a notebook titled "RMSD_graph.ipynb"
+Root Mean Square Deviaion (RMSD) to start and end are both calculated to evaluate the generated paths. Code for this can be found on the main branch as a notebook titled `RMSD_graph.py`
 
 ## References
 The DDPM model is largely based on the model made by Wang, Heron and Tiwary, with some modifications to allow for conditioning. Their paper can be found here:
