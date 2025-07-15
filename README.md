@@ -10,7 +10,7 @@ Ensure that you have the following:
 ## All-atom coordinate Model
 This branch contains the code and training scripts required to train the all-atom coordinate DDPM and generate all-atom coordinate discrete paths.
 
-The model operates on Cartesian coordinates. The structures it generates are generally low qualitty and not physically coherent 
+The model operates on Cartesian coordinates. The structures it generates are generally low quality and not physically coherent 
 
 The training code and the inference code are kept on the separate scripts `training_script.py` and `inference_script.py`
 
