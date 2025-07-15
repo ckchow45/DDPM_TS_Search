@@ -1,6 +1,10 @@
 # GenAI_TS_Search
 Repository of code for my MSC Applied Bioinformatics research project on developing a generative Denoising Diffusion Probabilistic Model (DDPM) to help transition state searches in discrete path sampling
 
+## Data Processing
+
+Data was initially processed by converting the databases of minima and transition states into a graph before using Djikstra's path finding algorithm to construct discrete paths. Code for this can be found on the main branch as "path_generation.py"
+
 ## The 3 models
 3 different models were made, with each kept on separate branches
 
@@ -12,6 +16,10 @@ Repository of code for my MSC Applied Bioinformatics research project on develop
 
 Each model will have a script containing all the functions and classes that are called, and a separate training script that handles the data processing pipeline and model training
 Please note that all the file paths will need to be updated if you wish to run these as they have been replaced with generic names
+
+## Model Evaluation
+
+RMSD to start and end are both calculated to evaluate the generated paths. Code for this can be found on the main branch as a notebook titled "RMSD_graph.ipynb"
 
 ## References
 The DDPM model is largely based on the model made by Wang, Heron and Tiwary, with some modifications to allow for conditioning. Their paper can be found here:
