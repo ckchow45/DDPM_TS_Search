@@ -21,7 +21,7 @@ Assuming you have data generated from the `path_generation.py` file and converte
 
 Make sure to update the file paths in the script to match your local directory structure
 
-Optionally, you can use the `RMSD_graph.ipynb` notebook on the main branch to evaluate the generated path with RMSD to start and end
+Optionally, you can use the `RMSD_graph.ipynb` notebook on the main branch to evaluate the generated path with RMSD to start and end. Alternatively, you can visualise the generated path in a visualisation software.
 
 ## References
 The DDPM model is largely based on the model made by Wang, Heron and Tiwary, with some modifications to allow for conditioning. Their paper can be found here:
