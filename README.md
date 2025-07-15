@@ -1,14 +1,27 @@
 # GenAI_TS_Search
-Repository of code for my MSC Applied Bioinformatics research project on developing a generative Denoising Diffusion Probabilistic Model (DDPM) to help transition state searches in discrete path sampling
+This branch contains the codebase for training and running the coarse-grained bead coordinate DDPM model, which generates full discrete paths of coarse-grained structures.
 
-## Coarse-Grained Coordinate Model
-This branch contains the code and training scripts required to train the CG coordinate DDPM and generate an CG coordinate path.
+## Dependencies
+Ensure that you have the following:
+- numpy, torch, tqdm, mdtraj, matplotlib (for RMSD/trajectory evaluation)
+- The dataset in `.mdcrd` format
+- A valid `prmtop` file for topology
 
-Assuming you have data generated from the path_generation.py file and converted them into .mdcrd format you can run the scripts to train your own model.
+## All-atom coordinate Model
+This branch contains the code and training scripts required to train the CG bead coordinate DDPM and generate CG bead discrete paths.
 
-The training script has been separated from the inference script. Make sure to run training_script.py before running inference_script.py
+The model operates on Cartesian coordinates of CG beads. The structures it generates are generally low quality and not physically coherent 
 
-All the background code on the actual UNet, beta schedule and general model architecture that is imported into the scripts can be found in Landscape_DDPM.py
+The training code and the inference code are kept on the separate scripts `training_script.py` and `inference_script.py`
+
+All the background code on the actual UNet, beta schedule and general model architecture that is imported into the script can be found in `Landscape_DDPM.py`
+
+## Usage
+Assuming you have data generated from the `path_generation.py` file and converted them into `.mdcrd` format you can run the `training_script.py` script to train your own model. Then run `inference_script.py` to generate a path
+
+Make sure to update the file paths in the script to match your local directory structure
+
+Optionally, you can use the `RMSD_graph.ipynb` notebook on the main branch to evaluate the generated path with RMSD to start and end. Alternatively, you can visual the generated path in a visualiser software.
 
 ## References
 The DDPM model is largely based on the model made by Wang, Heron and Tiwary, with some modifications to allow for conditioning. Their paper can be found here:
