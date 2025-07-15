@@ -1,5 +1,5 @@
 # GenAI_TS_Search
-This repository contains the codebase for my MSc Applied Bioinformatics research project focused on applying generative machine learning models—specifically a **Denoising Diffusion Probabilistic Model (DDPM)**—to aid **transition state (TS) searches** in **discrete path sampling (DPS)** workflows.
+This repository contains the codebase for my MSc Applied Bioinformatics research project focused on developing a generative machine learning **Denoising Diffusion Probabilistic Model (DDPM)** model to aid **transition state searches** in **discrete path sampling**
 
 ## Package Requirements
 Please make sure to install the following dependencies for the code to function:
