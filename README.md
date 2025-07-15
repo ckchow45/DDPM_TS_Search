@@ -14,7 +14,7 @@ Data was initially processed by converting the databases of minima and transitio
 
   -The dihedral model is on the Dihedral_model branch
 
-Each model will have a script containing all the functions and classes that are called, and a separate training script that handles the data processing pipeline and model training
+Each model will have a script containing all the functions and classes that are called (Landscape_DDPM/py), and a separate training script that prepares the data for model training before calling the model to train and generate paths
 
 Please note that all the file paths will need to be updated if you wish to run these as they have been replaced with generic names
 
