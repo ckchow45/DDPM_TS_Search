@@ -1,5 +1,5 @@
 # GenAI_TS_Search
-Repository of code for my MSC Applied Bioinformatics research project on making a generative Denoising Diffusion Probabilistic Model (DDPM) for transition state searches in discrete path sampling
+Repository of code for my MSC Applied Bioinformatics research project on developing a generative Denoising Diffusion Probabilistic Model (DDPM) to help transition state searches in discrete path sampling
 
 ## The 3 models
 3 different models were made, with each kept on separate branches
