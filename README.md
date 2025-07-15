@@ -1,5 +1,5 @@
 # GenAI_TS_Search
-Repository of code for my MSC Applied Bioinformatics research project on developing a generative Denoising Diffusion Probabilistic Model (DDPM) to help transition state searches in discrete path sampling
+This repository contains the codebase for my MSc Applied Bioinformatics research project focused on applying generative machine learning models—specifically a **Denoising Diffusion Probabilistic Model (DDPM)**—to aid **transition state (TS) searches** in **discrete path sampling (DPS)** workflows.
 
 ## Data Processing
 
@@ -7,6 +7,13 @@ Data was initially processed by converting the databases of minima and transitio
 
 ## The 3 models
 3 different models were made, with each kept on separate branches
+
+| Branch            | Model Type            | Description                                 |
+|-------------------|------------------------|--------------------------------------------|
+| `All_atom_model`  | All-Atom Coordinate    | Uses full Cartesian coordinates            |
+| `CG_model`        | Coarse-Grained (CG)    | Uses CG bead representation                |
+| `Dihedral_model`  | Dihedral Angle         | Uses internal coordinates (angles only)    |
+
 
   -The All-atom coordinate model is on the All_atom_model branch
 
