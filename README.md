@@ -14,7 +14,7 @@ The model operates on dihedral angles rather than Cartesian or coarse-grained be
 
 The training code and the inference code are kept on the same script so you can just run `dihedral_training.py` once
 
-All the background code on the actual UNet, beta schedule and general model architecture as well as the reconstruction code that is imported into the script can be found in Landscape_DDPM_v2.py
+All the background code on the actual UNet, beta schedule and general model architecture as well as the reconstruction code that is imported into the script can be found in `Landscape_DDOM.py`
 
 ## Usage
 Assuming you have data generated from the `path_generation.py` file and converted them into `.mdcrd` format you can run the `dihedral_training.py` script to train your own model and generate a path
