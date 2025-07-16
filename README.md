@@ -6,6 +6,7 @@ Please make sure to install the following dependencies for the code to function:
 - numpy
 - torch
 - MDTraj
+- tqdm
 - matplotlib (for optional RMSD evaluation)
 
 ## Data Processing
