@@ -1,4 +1,4 @@
-# GenAI_TS_Search
+# DDPM_TS_Search
 This branch contains the codebase for training and running the dihedral angle–based DDPM model, which generates coarse-grained RNA backbone structures using predicted dihedrals and fixed internal bond information. These predicted dihedrals are converted into full 3D coordinates through reconstruction with the aforementiond internal coordinate information
 
 ## Dependencies
@@ -6,6 +6,8 @@ Ensure that you have the following:
 - numpy, torch, tqdm, mdtraj, matplotlib (for RMSD/trajectory evaluation)
 - The dataset in `.mdcrd` format
 - A valid `prmtop` file for topology
+
+All code in this repository was run under Python version 3.11.9
 
 ## Dihedral Model
 This branch contains the code and training scripts required to train the dihedral DDPM and generate dihedrals which can processed into a CG coordinate path.
