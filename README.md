@@ -1,4 +1,4 @@
-# GenAI_TS_Search
+# DDPM_TS_Search
 This branch contains the codebase for training and running the all-atom coordinate DDPM model, which generates full discrete paths of full atom structures.
 
 ## Dependencies
@@ -7,6 +7,7 @@ Ensure that you have the following:
 - The dataset in `.mdcrd` format
 - A valid `prmtop` file for topology
 
+All code in this repository was run under Python version 3.11.9
 ## All-atom coordinate Model
 This branch contains the code and training scripts required to train the all-atom coordinate DDPM and generate all-atom coordinate discrete paths.
 
