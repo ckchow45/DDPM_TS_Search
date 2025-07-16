@@ -15,7 +15,7 @@ from scipy.spatial.transform import Rotation
 from collections import defaultdict
 
 # This file includes code adapted from:
-# Wang, Y., Herron, L., & Tiwary, P. (2022). From data to noise to data for mixing physics across temperatures with generative AI.
+# Wang Y, Herron L, Tiwary P. From data to noise to data for mixing physics across temperatures with generative artificial intelligence. Proc Natl Acad Sci U S A [Internet]. 2022 Aug 9 [cited 2025 May 30];119(32):e2203656119. Available from: https://www.pnas.org/doi/abs/10.1073/pnas.2203656119
 # Original implementation licensed under the MIT License.
 # Source: https://github.com/tiwarylab/DDPM_REMD
 
