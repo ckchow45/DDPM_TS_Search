@@ -32,6 +32,6 @@ Each branch contains:
 Root Mean Square Deviaion (RMSD) to start and end are both calculated to evaluate the generated paths. Code for this can be found on the main branch as a notebook titled `RMSD_graph.py`
 
 ## References
-The DDPM model code is largely based on the model made by Wang, Heron and Tiwary (https://github.com/tiwarylab/DDPM_REMD), with some modifications to allow for conditioning, used under the MIT license (https://opensource.org/license/mit/). Their paper can be found here:
+Parts of this code are adapted from the DDPM implementation by Wang, Herron, and Tiwary (https://github.com/tiwarylab/DDPM_REMD) under the MIT license (https://opensource.org/license/mit/). The original license is included in this repository and their original paper can be found below.
 
 Wang Y, Herron L, Tiwary P. From data to noise to data for mixing physics across temperatures with generative artificial intelligence. Proc Natl Acad Sci U S A [Internet]. 2022 Aug 9 [cited 2025 May 30];119(32):e2203656119. Available from: https://www.pnas.org/doi/abs/10.1073/pnas.2203656119
