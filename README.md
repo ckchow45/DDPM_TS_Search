@@ -24,6 +24,6 @@ Make sure to update the file paths in the script to match your local directory s
 Optionally, you can use the `RMSD_graph.ipynb` notebook on the main branch to evaluate the generated path with RMSD to start and end. Alternatively, you can visual the generated path in a visualiser software.
 
 ## References
-The DDPM model is largely based on the model made by Wang, Heron and Tiwary, with some modifications to allow for conditioning. Their paper can be found here:
+Parts of this code are adapted from the DDPM implementation by Wang, Herron, and Tiwary (https://github.com/tiwarylab/DDPM_REMD) under the MIT license (https://opensource.org/license/mit/). The original license is included in this repository and their original paper can be found below.
 
 Wang Y, Herron L, Tiwary P. From data to noise to data for mixing physics across temperatures with generative artificial intelligence. Proc Natl Acad Sci U S A [Internet]. 2022 Aug 9 [cited 2025 May 30];119(32):e2203656119. Available from: https://www.pnas.org/doi/abs/10.1073/pnas.2203656119
