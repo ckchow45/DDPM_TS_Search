@@ -1,7 +1,7 @@
-# GenAI_TS_Search
+DDPM_TS_Search
 This repository contains the codebase for my MSc Applied Bioinformatics research project focused on developing a generative machine learning **Denoising Diffusion Probabilistic Model (DDPM)** model to aid **transition state searches** in **discrete path sampling**
 
-## Package Requirements
+## Requirements
 Please make sure to install the following dependencies for the code to function:
 - numpy
 - torch
@@ -9,6 +9,7 @@ Please make sure to install the following dependencies for the code to function:
 - tqdm
 - matplotlib (for optional RMSD evaluation)
 
+All code in this repository was run under Python version 3.11.9
 ## Data Processing
 
 The data can be found in the appendices of my dissertation, although it should be possible to use other energy landscape data with some modifications to the code.
