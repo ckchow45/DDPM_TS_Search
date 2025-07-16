@@ -14,6 +14,11 @@ import mdtraj as md
 from scipy.spatial.transform import Rotation
 from collections import defaultdict
 
+# This file includes code adapted from:
+# Wang Y, Herron L, Tiwary P. From data to noise to data for mixing physics across temperatures with generative artificial intelligence. Proc Natl Acad Sci U S A [Internet]. 2022 Aug 9 [cited 2025 May 30];119(32):e2203656119. Available from: https://www.pnas.org/doi/abs/10.1073/pnas.2203656119
+# Original implementation licensed under the MIT License.
+# Source: https://github.com/tiwarylab/DDPM_REMD
+
 # helper functions
 def A(x):   return 0.1 * x           # angstroms converted to nm
 def deg(x): return np.radians(x)     # degrees converted to rad
