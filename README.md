@@ -1,4 +1,4 @@
-# GenAI_TS_Search
+# DDPM_TS_Search
 This branch contains the codebase for training and running the coarse-grained bead coordinate DDPM model, which generates full discrete paths of coarse-grained structures.
 
 ## Dependencies
@@ -6,6 +6,8 @@ Ensure that you have the following:
 - numpy, torch, tqdm, mdtraj, matplotlib (for RMSD/trajectory evaluation)
 - The dataset in `.mdcrd` format
 - A valid `prmtop` file for topology
+
+All code in this repository was run under Python version 3.11.9
 
 ## All-atom coordinate Model
 This branch contains the code and training scripts required to train the CG bead coordinate DDPM and generate CG bead discrete paths.
