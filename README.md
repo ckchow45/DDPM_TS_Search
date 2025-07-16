@@ -10,6 +10,8 @@ Please make sure to install the following dependencies for the code to function:
 
 ## Data Processing
 
+The data can be found in the appendices of my dissertation, although it should be possible to use other energy landscape data with some modifications to the code.
+
 Data was initially processed by converting the databases of minima and transition states into a graph before using Djikstra's path finding algorithm to construct discrete paths. Please see `path_generation.py` on the main branch for implementation.
 
 ## The 3 models
@@ -21,7 +23,7 @@ Data was initially processed by converting the databases of minima and transitio
 | `CG_model`        | Coarse-Grained (CG)    | Trained off CG bead representation and generates coarse-grained structures                |
 | `Dihedral_model`  | Dihedral Angle         | Trained off dihedral angles and generates dihedral angles which are used to reconstruct structures    |
 
-Each model contains:
+Each branch contains:
 - A script (e.g., `Landscape_DDPM.py`) defining model architecture and various helper functions.
 - A training script to load data, process it, train the model, and generate paths.
 
